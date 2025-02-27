@@ -8,9 +8,9 @@ from helper import plot
 import torchvision.transforms as T
 import cv2
 
-MAX_MEMORY = 500_000 #TUNABLE
-BATCH_SIZE = 2000 #TUNABLE
-LR = 0.0075 #TUNABLE
+MAX_MEMORY = 10_000 #TUNABLE
+BATCH_SIZE = 256 #TUNABLE
+LR = 0.3e-5 #TUNABLE
 
 class Agent:
 
@@ -21,7 +21,7 @@ class Agent:
         self.memory = deque(maxlen=MAX_MEMORY) # popleft()
         self.input_shape = (1, 84, 84)
         #self.model = Linear_QNet(11, 256, 3)
-        self.model = ConvDQN(self.input_shape, 3)
+        self.model = ConvDQN(self.input_shape, 4)
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
 
     def preprocess(self, state):
@@ -105,10 +105,10 @@ class Agent:
 
     def get_action(self, state):
         # random moves: tradeoff exploration / exploitation
-        self.epsilon = 2000 - self.n_games
-        final_move = [0, 0, 0]
-        if random.randint(0, 1000) < self.epsilon:
-            move = random.randint(0, 2)
+        self.epsilon = max(3, 500 - self.n_games)
+        final_move = [0, 0, 0, 0]
+        if random.randint(0, 250) < self.epsilon:
+            move = random.randint(0, 3)
         else:
             #state0 = torch.tensor(state, dtype=torch.float)
             #state0 = self.preprocess(state)
@@ -123,12 +123,35 @@ class Agent:
             move = torch.argmax(q_values).item()
         final_move[move] = 1  # Convert to one-hot encoded action
         return final_move 
+    
+    """def get_action(self, state):
+        # Suppose we do 1000 episodes total
+        eps_start = 1.0
+        eps_final = 0.1
+        eps_decay_episodes = 500  # decay over first 500 episodes
+        
+        # Compute epsilon for this game
+        fraction = min(self.n_games / eps_decay_episodes, 1.0)  
+        self.epsilon = eps_start + fraction * (eps_final - eps_start)
+        # i.e., linearly goes from 1.0 to 0.1 as n_games goes from 0 to 500
+
+        # Decide random vs. exploit
+        if random.random() < self.epsilon:
+            move = random.randint(0, 3)
+        else:
+            q_values = self.model(state.unsqueeze(0)) 
+            move = torch.argmax(q_values).item()
+        
+        final_move = [0, 0, 0, 0]
+        final_move[move] = 1
+        return final_move"""
         
         
 
 def train():
     plot_scores = []
     plot_mean_scores = []
+    plot_rewards = []
     total_score = 0
     totalReward = 0
     record = 0
@@ -166,13 +189,16 @@ def train():
 
             print("Game", agent.n_games, "Score", score, "Reward", totalReward)
 
-            totalReward = 0
-
             plot_scores.append(score)
             total_score += score
             mean_score = total_score / agent.n_games
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
+            #mean_reward = totalReward / agent.n_games
+            #plot_rewards.append(mean_reward)
+            #plot(plot_scores, plot_rewards)
+
+            totalReward = 0
 
 
 if __name__ == '__main__':

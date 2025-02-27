@@ -88,25 +88,25 @@ class SnakeGameAI:
         game_over = False
         if self.is_collision() == 'wall':
             game_over = True
-            reward = -2
+            reward = -10
             return reward, game_over, self.score
         elif self.is_collision() == 'self' or self.noFood > 100*len(self.snake):
             game_over = True
-            reward = -2
+            reward = -10
             return reward, game_over, self.score
             
         # 4. place new food or just move
         if self.head == self.food:
             self.score += 1
             self.noFood = 0
-            reward = 20
+            reward = 0
             self._place_food()
         else:
             #if self.euclidean_distance(self.head, self.food) < self.euclidean_distance(self.snake[1], self.food):
                 #reward = 1
             #else:
                 #reward = -1
-            reward = 0.1
+            reward = 1
             self.snake.pop()
         
         # 5. update ui and clock
@@ -152,16 +152,36 @@ class SnakeGameAI:
         clock_wise = [Direction.RIGHT, Direction.DOWN, Direction.LEFT, Direction.UP]
         idx = clock_wise.index(self.direction)
         
-        if np.array_equal(action, [1, 0, 0]):
+        '''if np.array_equal(action, [1, 0, 0]):
             new_dir = clock_wise[idx] # no change
         elif np.array_equal(action, [0, 1, 0]):
             next_idx = (idx + 1) % 4
             new_dir = clock_wise[next_idx] # right turn r -> d -> l -> u
         else: # [0, 0, 1]
             next_idx = (idx - 1) % 4
-            new_dir = clock_wise[next_idx] # left turn r -> u -> l -> d
-
-        self.direction = new_dir
+            new_dir = clock_wise[next_idx] # left turn r -> u -> l -> d'''
+        
+        if np.array_equal(action, [1, 0, 0, 0]):
+            if self.direction == Direction.LEFT:
+                self.direction = Direction.LEFT
+            else:
+                self.direction = Direction.RIGHT
+        elif np.array_equal(action, [0, 1, 0, 0]):
+            if self.direction == Direction.UP:
+                self.direction = Direction.UP
+            else:
+                self.direction = Direction.DOWN
+        elif np.array_equal(action, [0, 0, 1, 0]):
+            if self.direction == Direction.RIGHT:
+                self.direction = Direction.RIGHT
+            else:
+                self.direction = Direction.LEFT
+        else: #np.array_equal(action, [0, 0, 0, 1]):
+            if self.direction == Direction.DOWN:
+                self.direction = Direction.DOWN
+            else:
+                self.direction = Direction.UP
+        
 
         x = self.head.x
         y = self.head.y
