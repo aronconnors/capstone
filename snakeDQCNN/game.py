@@ -99,7 +99,7 @@ class SnakeGameAI:
         if self.head == self.food:
             self.score += 1
             self.noFood = 0
-            reward = 0
+            reward = 10
             self._place_food()
         else:
             #if self.euclidean_distance(self.head, self.food) < self.euclidean_distance(self.snake[1], self.food):

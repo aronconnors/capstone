@@ -5,24 +5,7 @@ import torch.nn.functional as F
 import os
 import numpy as np
 
-class Linear_QNet(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super().__init__()
-        self.linear1 = nn.Linear(input_size, hidden_size)
-        self.linear2 = nn.Linear(hidden_size, output_size)
 
-    def forward(self, x):
-        x = F.relu(self.linear1(x))
-        x = self.linear2(x)
-        return x
-    
-    def save(self, file_name='model.pth'):
-        model_folder_path = './model'
-        if not os.path.exists(model_folder_path):
-            os.makedirs(model_folder_path)
-
-        file_name = os.path.join(model_folder_path, file_name)
-        torch.save(self.state_dict(), file_name)
 
 class ConvDQN(nn.Module):
     def __init__(self, input_shape, num_actions):
@@ -44,10 +27,10 @@ class ConvDQN(nn.Module):
     def calc_conv_output(self, shape):
         dummy_input = torch.zeros(1, *shape)
         dummy_output = self.conv_layers(dummy_input)
-        return int(np.prod(dummy_output.size()))
+        return int(np.prod(dummy_output.size()[1:]))
 
     def forward(self, x):
-        conv_out = self.conv_layers(x).view(x.size()[0], -1)
+        conv_out = self.conv_layers(x).view(x.shape[0], -1)
         return self.fc_layers(conv_out)
     
     def save(self, file_name='model.pth'):
@@ -71,7 +54,7 @@ class QTrainer:
         state = torch.tensor(state, dtype=torch.float)
         next_state = np.array(next_state) 
         next_state = torch.tensor(next_state, dtype=torch.float)
-        action = np.array(action)  # Converts [0, 0, 1] to 2
+        action = np.array(action) 
         action = torch.tensor(action, dtype=torch.long)
         reward = torch.tensor(reward, dtype=torch.float)
         # (n,x)

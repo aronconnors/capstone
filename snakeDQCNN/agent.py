@@ -8,19 +8,18 @@ from helper import plot
 import torchvision.transforms as T
 import cv2
 
-MAX_MEMORY = 10_000 #TUNABLE
-BATCH_SIZE = 256 #TUNABLE
-LR = 0.3e-5 #TUNABLE
+MAX_MEMORY = 100_000 #TUNABLE
+BATCH_SIZE = 1000 #TUNABLE
+LR = 0.0001 #TUNABLE
 
 class Agent:
 
     def __init__(self):
         self.n_games = 0
         self.epsilon = 0 #randomness
-        self.gamma = 0.99 #discount rate
+        self.gamma = 0.7 #discount rate
         self.memory = deque(maxlen=MAX_MEMORY) # popleft()
         self.input_shape = (1, 84, 84)
-        #self.model = Linear_QNet(11, 256, 3)
         self.model = ConvDQN(self.input_shape, 4)
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
 
@@ -29,61 +28,9 @@ class Agent:
         return transform(state)
     
     def get_state(self, game):
-        #print(np.array(game.rgb_array).shape)
-        '''
-        head = game.snake[0]
-        point_l = Point(head.x - 20, head.y)
-        point_r = Point(head.x + 20, head.y)
-        point_u = Point(head.x, head.y - 20)
-        point_d = Point(head.x, head.y + 20)
-
-        dir_l = game.direction == Direction.LEFT
-        dir_r = game.direction == Direction.RIGHT
-        dir_u = game.direction == Direction.UP
-        dir_d = game.direction == Direction.DOWN
-
-        state = [
-            # Danger straight
-            (dir_r and game.is_collision(point_r)) or
-            (dir_l and game.is_collision(point_l)) or
-            (dir_u and game.is_collision(point_u)) or
-            (dir_d and game.is_collision(point_d)),
-
-            # Danger right
-            (dir_u and game.is_collision(point_r)) or
-            (dir_d and game.is_collision(point_l)) or
-            (dir_l and game.is_collision(point_u)) or
-            (dir_r and game.is_collision(point_d)),
-
-            # Danger left
-            (dir_d and game.is_collision(point_r)) or
-            (dir_u and game.is_collision(point_l)) or
-            (dir_r and game.is_collision(point_u)) or
-            (dir_l and game.is_collision(point_d)),
-
-            # Move direction
-            dir_l,
-            dir_r,
-            dir_u,
-            dir_d,
-
-            #Food location
-            game.food.x < game.head.x, #food left
-            game.food.x > game.head.x, #food right
-            game.food.y < game.head.y, #food up
-            game.food.y > game.head.y #food down
-        ]'''
-        #returns true/false to 0, 1
-        #return np.array(state, dtype=int)
-        #processed_image = self.preprocess(game.rgb_array)
-        #processed_image = processed_image.squeeze(0).cpu().numpy()  # Remove batch dimension & convert to NumPy
-
-        # Ensure correct dtype
-        #processed_image = (processed_image * 255).astype(np.uint8)  # If values are normalized (0 to 1)
-
-        #cv2.imshow("Preprocessed Image", processed_image)
-        #cv2.waitKey(0)  # Wait for a key press
-        return self.preprocess(game.rgb_array)
+        bgr_array = np.array(game.rgb_array[..., ::-1])
+        bgr_array = np.transpose(bgr_array, (1, 0, 2))
+        return self.preprocess(bgr_array)
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done)) # popleft if MAX_MEM reached
@@ -105,12 +52,12 @@ class Agent:
 
     def get_action(self, state):
         # random moves: tradeoff exploration / exploitation
-        self.epsilon = max(3, 500 - self.n_games)
+        self.epsilon = max(0, 0 - self.n_games)
         final_move = [0, 0, 0, 0]
-        if random.randint(0, 250) < self.epsilon:
+        if random.randint(0, 50) < self.epsilon:
             move = random.randint(0, 3)
         else:
-            #state0 = torch.tensor(state, dtype=torch.float)
+            state0 = torch.tensor(state, dtype=torch.float).unsqueeze(0)
             #state0 = self.preprocess(state)
             #print(state0.shape)
             #state = self.preprocess(state)
@@ -118,33 +65,11 @@ class Agent:
         # Add batch dimension (dim=0) and channel dimension (dim=1)
         # Now shape will be (1, 1, H, W)
            
-            q_values = self.model(state.unsqueeze(0))
+            q_values = self.model(state0)
             print(q_values)
             move = torch.argmax(q_values).item()
         final_move[move] = 1  # Convert to one-hot encoded action
         return final_move 
-    
-    """def get_action(self, state):
-        # Suppose we do 1000 episodes total
-        eps_start = 1.0
-        eps_final = 0.1
-        eps_decay_episodes = 500  # decay over first 500 episodes
-        
-        # Compute epsilon for this game
-        fraction = min(self.n_games / eps_decay_episodes, 1.0)  
-        self.epsilon = eps_start + fraction * (eps_final - eps_start)
-        # i.e., linearly goes from 1.0 to 0.1 as n_games goes from 0 to 500
-
-        # Decide random vs. exploit
-        if random.random() < self.epsilon:
-            move = random.randint(0, 3)
-        else:
-            q_values = self.model(state.unsqueeze(0)) 
-            move = torch.argmax(q_values).item()
-        
-        final_move = [0, 0, 0, 0]
-        final_move[move] = 1
-        return final_move"""
         
         
 
